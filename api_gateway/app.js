@@ -2,10 +2,14 @@ const express = require('express');
 const cors = require('cors');
 const amqp = require('amqplib');
 const crypto = require('crypto');
+const path = require('path');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Serve static frontend files from the root directory
+app.use(express.static(path.join(__dirname, '../')));
 
 const RABBITMQ_HOST = process.env.RABBITMQ_HOST || 'localhost';
 const RABBITMQ_PORT = process.env.RABBITMQ_PORT || 5672;

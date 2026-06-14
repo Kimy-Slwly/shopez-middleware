@@ -4,6 +4,7 @@
   "description": "This repository contains the complete implementation of the **ShopEZ Malaysia Asynchronous Middleware Integration Prototype**.",
   "main": "index.js",
   "scripts": {
+    "start": "concurrently \"node api_gateway/app.js\" \"node order_service/consumer.js\" \"node inventory_service/consumer.js\" \"node payment_service/consumer.js\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -12,6 +13,7 @@
   "type": "commonjs",
   "dependencies": {
     "amqplib": "^2.0.1",
+    "concurrently": "^10.0.3",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "express-http-proxy": "^2.1.2",
