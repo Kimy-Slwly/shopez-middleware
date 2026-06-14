@@ -75,6 +75,21 @@ app.post('/api/orders/place_order', async (req, res) => {
     }
 });
 
+// A helper route to view the SQLite database from the browser!
+app.get('/api/database', (req, res) => {
+    const db = require('../db');
+    db.all('SELECT * FROM orders ORDER BY created_at DESC LIMIT 50', [], (err, rows) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.json({
+            message: "Viewing the last 50 orders from the Cloud SQLite Database!",
+            total_visible: rows.length,
+            orders: rows
+        });
+    });
+});
+
 const port = process.env.PORT || 8000;
 app.listen(port, () => {
     console.log(`Starting API Gateway on port ${port}...`);
