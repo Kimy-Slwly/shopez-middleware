@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ShopEZ | Wireless Earbuds Pro</title>
+    <style>
+        /* CSS reset and Shopee colors */
+        body { background: #f5f5f5; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 0; color: #333; }
+        .header { background: #ee4d2d; color: white; padding: 15px 50px; display: flex; align-items: center; justify-content: space-between; }
+        .header .logo { font-size: 24px; font-weight: bold; display: flex; align-items: center; gap: 10px; text-decoration: none; color: white; }
+        .container { max-width: 1200px; margin: 20px auto; }
+        .product-card { background: white; border-radius: 3px; padding: 20px; display: flex; gap: 40px; box-shadow: 0 1px 1px rgba(0,0,0,.05); }
+        .product-image { flex: 0 0 400px; }
+        .product-image img { width: 100%; border: 1px solid #e8e8e8; }
+        .product-details { flex: 1; }
+        .product-title { font-size: 20px; font-weight: 500; margin-bottom: 10px; }
+        .product-rating { display: flex; gap: 20px; color: #767676; font-size: 14px; margin-bottom: 15px; }
+        .product-rating span { border-right: 1px solid #e8e8e8; padding-right: 20px; }
+        .product-rating span:last-child { border: none; }
+        .star { color: #ee4d2d; }
+        .product-price { background: #fafafa; padding: 15px 20px; margin-bottom: 25px; }
+        .price-text { color: #ee4d2d; font-size: 30px; font-weight: 500; }
+        .control-group { display: flex; align-items: center; margin-bottom: 25px; }
+        .control-label { width: 110px; color: #757575; font-size: 14px; }
+        .quantity-selector { display: flex; align-items: center; border: 1px solid #e8e8e8; border-radius: 2px; }
+        .quantity-btn { width: 32px; height: 32px; border: none; background: white; font-size: 16px; cursor: pointer; outline: none; }
+        .quantity-btn:hover { background: #f8f8f8; }
+        .quantity-input { width: 50px; height: 30px; border: none; border-left: 1px solid #e8e8e8; border-right: 1px solid #e8e8e8; text-align: center; font-size: 16px; outline: none; }
+        .buttons { display: flex; gap: 15px; margin-top: 30px; }
+        .btn { padding: 0 20px; height: 48px; font-size: 16px; cursor: pointer; border-radius: 2px; display: flex; align-items: center; justify-content: center; min-width: 180px; transition: background 0.2s; text-decoration: none; }
+        .btn-cart { background: #ffeee8; border: 1px solid #ee4d2d; color: #ee4d2d; }
+        .btn-cart:hover { background: #fff5f2; }
+        .btn-micro { background: #ee4d2d; border: 1px solid #ee4d2d; color: white; }
+        .btn-micro:hover { background: #d73211; }
+        .btn-sim { background: #222; border: 1px solid #222; color: white; margin-top: 30px; display: inline-flex; }
+        .btn-sim:hover { background: #444; }
+        
+        /* Toast */
+        .toast { position: fixed; top: 20px; right: 20px; background: #10b981; color: white; padding: 15px 25px; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: none; z-index: 1000; animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+    </style>
+</head>
+<body>
+    <div class="toast" id="success-toast">
+        <div style="font-weight: bold; margin-bottom: 5px;">Order Placed Successfully!</div>
+        <div>Processed instantly via Microservices backend.</div>
+    </div>
+
+    <header class="header">
+        <a href="#" class="logo">
+            <svg viewBox="0 0 24 24" width="32" height="32" stroke="currentColor" stroke-width="2" fill="none"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+            ShopEZ
+        </a>
+        <div style="font-size: 14px;">Welcome back, User!</div>
+    </header>
+
+    <div class="container">
+        <div class="product-card">
+            <div class="product-image">
+                <img src="product_earbuds.png" alt="Wireless Earbuds Pro">
+            </div>
+            <div class="product-details">
+                <h1 class="product-title">ShopEZ Wireless Earbuds Pro - Active Noise Cancelling, Bluetooth 5.3</h1>
+                <div class="product-rating">
+                    <span><span class="star">★★★★★</span> 4.9</span>
+                    <span><strong>12.4k</strong> Ratings</span>
+                    <span><strong>38.9k</strong> Sold</span>
+                </div>
+                
+                <div class="product-price">
+                    <div class="price-text">RM 149.00</div>
+                </div>
+
+                <div class="control-group">
+                    <div class="control-label">Shipping</div>
+                    <div style="font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+                        Free Shipping to Kuala Lumpur
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <div class="control-label">Quantity</div>
+                    <div class="quantity-selector">
+                        <button class="quantity-btn" onclick="updateQty(-1)">-</button>
+                        <input type="text" class="quantity-input" id="qty" value="1" readonly>
+                        <button class="quantity-btn" onclick="updateQty(1)">+</button>
+                    </div>
+                    <div style="margin-left: 15px; color: #757575; font-size: 14px;">148 pieces available</div>
+                </div>
+
+                <div class="buttons">
+                    <button class="btn btn-cart">Add To Cart</button>
+                    <button class="btn btn-micro" onclick="placeNormalOrder()">Buy Now</button>
+                </div>
+
+                <!-- Developer Tools removed for User POV -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api/orders';
+        let qty = 1;
+
+        function updateQty(delta) {
+            qty = Math.max(1, qty + delta);
+            document.getElementById('qty').value = qty;
+        }
+
+        async function placeNormalOrder() {
+            // Trigger simulation in Admin POV using localStorage
+            localStorage.setItem('trigger_admin_sim', JSON.stringify({ qty: qty, ts: Date.now() }));
+            
+            const payload = {
+                customer_id: "CUST-MY-8819",
+                items: [{ product_id: "PROD-001", quantity: qty, price: 149.00 }],
+                total_amount: qty * 149.00
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/place_order`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (response.ok || response.status === 202) {
+                    const toast = document.getElementById('success-toast');
+                    toast.style.display = 'block';
+                    setTimeout(() => { toast.style.display = 'none'; }, 3000);
+                }
+            } catch (err) {
+                alert(`Error connecting to API: ${err.message}`);
+            }
+        }
+    </script>
+</body>
+</html>

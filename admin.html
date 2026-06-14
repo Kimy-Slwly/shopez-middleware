@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>High Traffic Architecture Flow Simulator</title>
+    <style>
+        body { background: #0a0b10; color: #fff; font-family: 'Helvetica Neue', sans-serif; padding: 20px; margin: 0; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 20px; }
+        h1 { margin: 0; font-size: 22px; color: #fff; }
+        
+        .controls { background: #12131a; padding: 15px 20px; border-radius: 8px; border: 1px solid #333; display: flex; gap: 20px; align-items: center; margin-bottom: 20px; }
+        button { background: #ee4d2d; color: white; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: background 0.2s; }
+        button:hover { background: #d73211; }
+        button:disabled { background: #555; cursor: not-allowed; }
+        
+        .dashboard { display: flex; gap: 20px; }
+        .panel { background: #12131a; border: 1px solid #333; padding: 20px; flex: 1; border-radius: 8px; display: flex; flex-direction: column; }
+        .panel h2 { margin-top: 0; color: #ee4d2d; font-size: 18px; border-bottom: 1px solid #222; padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* Badges */
+        .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; background: #e5e7eb; color: #4b5563; }
+        
+        /* Architecture Flow Diagrams */
+        .visualizer { margin-top: 10px; margin-bottom: 20px; height: 160px; position: relative; border: 1px solid #222; background: #050508; border-radius: 8px; padding: 20px 10px; display: flex; justify-content: space-around; align-items: center; }
+        .node { background: white; border: 2px solid #ccc; padding: 10px 15px; border-radius: 20px; font-size: 13px; font-weight: bold; text-align: center; color: #333; position: relative; z-index: 2; transition: all 0.2s; min-width: 100px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .node.active { border-color: #ee4d2d; box-shadow: 0 0 15px rgba(238, 77, 45, 0.6); background: #fff0ed; transform: scale(1.05); }
+        
+        .broker-node { background: #2b1055; color: white; border-color: #8a2be2; border-radius: 8px; }
+        .broker-node.active { box-shadow: 0 0 15px rgba(138, 43, 226, 0.6); background: #3b1075; border-color: #a855f7; }
+
+        /* Traffic Queue Counters on Nodes */
+        .q-badge { position: absolute; top: -12px; right: -12px; background: #ef4444; color: white; border-radius: 50%; width: 26px; height: 26px; font-size: 12px; display: flex; justify-content: center; align-items: center; border: 2px solid #050508; font-weight: bold; opacity: 0; transition: opacity 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        .q-badge.visible { opacity: 1; }
+        .q-badge.heavy { background: #b91c1c; transform: scale(1.2); }
+
+        /* Stats & Logs */
+        .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+        .metric-box { background: #050508; padding: 15px; border-radius: 6px; border: 1px solid #222; text-align: center; }
+        .metric-label { font-size: 12px; color: #888; text-transform: uppercase; margin-bottom: 5px; }
+        .metric-value { font-size: 28px; font-weight: bold; color: #ee4d2d; }
+        .metric-value.micro { color: #10b981; }
+        
+        .log { background: #000; font-family: monospace; font-size: 11px; height: 200px; overflow-y: auto; padding: 10px; border-radius: 4px; border: 1px solid #222; }
+        .log span { display: block; margin-bottom: 4px; border-bottom: 1px solid #111; padding-bottom: 2px; }
+        .log .ok { color: #10b981; }
+        .log .wait { color: #f59e0b; }
+        .log .err { color: #ef4444; }
+        .log .sys { color: #888; }
+        
+        .connector-line { position: absolute; background: #333; z-index: 1; height: 2px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Architecture Flow Simulator (100 Concurrent Buyers)</h1>
+        <!-- Link removed to prevent Admin from going to User POV -->
+    </div>
+
+    <div class="controls">
+        <select id="buyerCount" style="padding: 10px; font-size: 16px; border-radius: 4px; background: #222; color: white; border: 1px solid #444;" onchange="updateBuyerCount(this.value)">
+            <option value="1">1 Buyer (Normal Day)</option>
+            <option value="100" selected>100 Buyers (11.11 Sales)</option>
+        </select>
+        <button id="startBtn" onclick="startLoadTest()">Run 100 Buyers Simulation</button>
+        <span style="color: #aaa; font-size: 14px;">Watch the diagram nodes to see how traffic queues up!</span>
+    </div>
+
+    <div class="dashboard">
+        <!-- Monolith Panel -->
+        <div class="panel">
+            <h2>
+                Point-to-Point (Synchronous) Flow
+                <span id="mono-ui-status" class="status-badge">Idle</span>
+            </h2>
+            <div style="font-size: 13px; color: #888; margin-bottom: 15px;">Clients held open. API calls Inventory, then Payment sequentially over HTTP.</div>
+            
+            <div class="visualizer">
+                <div class="connector-line" style="width: 75%; left: 12.5%; top: 50%;"></div>
+                <div class="node" id="mono-api">API <div class="q-badge" id="mono-q-api">0</div></div>
+                <div class="node" id="mono-ord">Order <div class="q-badge" id="mono-q-ord">0</div></div>
+                <div class="node" id="mono-inv">Inventory <div class="q-badge" id="mono-q-inv">0</div></div>
+                <div class="node" id="mono-pay">Payment <div class="q-badge" id="mono-q-pay">0</div></div>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-box">
+                    <div class="metric-label">Completed Orders</div>
+                    <div class="metric-value" id="mono-comp">0 / 100</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Avg Wait Time</div>
+                    <div class="metric-value" id="mono-time">0.0s</div>
+                </div>
+            </div>
+            <div class="log" id="mono-log"><span class="sys">> Awaiting traffic...</span></div>
+        </div>
+
+        <!-- Microservices Panel -->
+        <div class="panel">
+            <h2>
+                Microservices Flow
+                <span id="micro-ui-status" class="status-badge">Idle</span>
+            </h2>
+            <div style="font-size: 13px; color: #888; margin-bottom: 15px;">API returns instantly. 100 orders sent to RabbitMQ. Workers process asynchronously in parallel.</div>
+            
+            <div class="visualizer">
+                <div class="connector-line" style="width: 25%; left: 15%; top: 50%;"></div>
+                
+                <div class="node" id="micro-api">API <div class="q-badge" id="micro-q-api">0</div></div>
+                
+                <div class="node broker-node" id="micro-broker">RabbitMQ <div class="q-badge" id="micro-q-broker" style="background:#a855f7;">0</div></div>
+                
+                <div style="display: flex; flex-direction: column; gap: 15px; position: relative; z-index: 2;">
+                    <div class="node" id="micro-ord" style="padding: 5px 15px; font-size: 11px;">Order <div class="q-badge" id="micro-q-ord">0</div></div>
+                    <div class="node" id="micro-inv" style="padding: 5px 15px; font-size: 11px;">Inventory <div class="q-badge" id="micro-q-inv">0</div></div>
+                    <div class="node" id="micro-pay" style="padding: 5px 15px; font-size: 11px;">Payment <div class="q-badge" id="micro-q-pay">0</div></div>
+                </div>
+                <!-- V lines to consumers -->
+                <div style="position: absolute; width: 2px; height: 70px; background: #333; left: 63%; top: 25%;"></div>
+                <div style="position: absolute; width: 10%; height: 2px; background: #333; left: 63%; top: 25%;"></div>
+                <div style="position: absolute; width: 10%; height: 2px; background: #333; left: 63%; top: 50%;"></div>
+                <div style="position: absolute; width: 10%; height: 2px; background: #333; left: 63%; top: 75%;"></div>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-box">
+                    <div class="metric-label">Orders Handled</div>
+                    <div class="metric-value micro" id="micro-comp">0 / 100</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Avg Response Time</div>
+                    <div class="metric-value micro" id="micro-time">0.0s</div>
+                </div>
+            </div>
+            <div class="log" id="micro-log"><span class="sys">> Awaiting traffic...</span></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api/orders';
+        let TOTAL_BUYERS = 100;
+
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('buyers')) {
+            const b = parseInt(urlParams.get('buyers'));
+            if (!isNaN(b) && b > 0) {
+                TOTAL_BUYERS = b;
+            }
+        }
+
+        window.onload = function() {
+            const pageTitle = document.querySelector('.header h1');
+            if (pageTitle) pageTitle.innerText = `Architecture Flow Simulator (${TOTAL_BUYERS} Concurrent Buyers)`;
+            
+            const startBtn = document.getElementById('startBtn');
+            if (startBtn) startBtn.innerText = `Run ${TOTAL_BUYERS} Buyers Simulation`;
+            
+            const selectEl = document.getElementById('buyerCount');
+            if (selectEl) selectEl.value = TOTAL_BUYERS;
+
+            if (urlParams.has('buyers')) {
+                startLoadTest();
+            }
+
+            // Listen for triggers from User POV (index.html)
+            window.addEventListener('storage', function(e) {
+                if (e.key === 'trigger_admin_sim' && e.newValue) {
+                    const data = JSON.parse(e.newValue);
+                    updateBuyerCount(data.qty);
+                    startLoadTest();
+                }
+            });
+        };
+
+        function updateBuyerCount(val) {
+            TOTAL_BUYERS = parseInt(val);
+            const pageTitle = document.querySelector('.header h1');
+            if (pageTitle) pageTitle.innerText = `Architecture Flow Simulator (${TOTAL_BUYERS} Concurrent Buyers)`;
+            const startBtn = document.getElementById('startBtn');
+            if (startBtn) startBtn.innerText = `Run ${TOTAL_BUYERS} Buyers Simulation`;
+            const selectEl = document.getElementById('buyerCount');
+            if (selectEl) selectEl.value = TOTAL_BUYERS;
+        }
+
+        function logTo(panel, msg, cls) {
+            const box = document.getElementById(`${panel}-log`);
+            const span = document.createElement('span');
+            span.className = cls;
+            span.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            box.appendChild(span);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function updateBadge(id, amount) {
+            const badge = document.getElementById(id);
+            let current = parseInt(badge.innerText) || 0;
+            current += amount;
+            if (current < 0) current = 0;
+            
+            badge.innerText = current;
+            badge.className = current > 0 ? (current > 5 ? 'q-badge visible heavy' : 'q-badge visible') : 'q-badge';
+            
+            // Activate node color if it has a queue
+            const nodeId = id.replace('-q-', '-');
+            const node = document.getElementById(nodeId);
+            if (current > 0) {
+                node.classList.add('active');
+            } else {
+                node.classList.remove('active');
+            }
+        }
+
+        async function startLoadTest() {
+            document.getElementById('startBtn').disabled = true;
+
+            // Reset UI
+            document.getElementById('mono-comp').innerText = `0 / ${TOTAL_BUYERS}`;
+            document.getElementById('micro-comp').innerText = `0 / ${TOTAL_BUYERS}`;
+            document.getElementById('mono-time').innerText = `0.0s`;
+            document.getElementById('micro-time').innerText = `0.0s`;
+            document.getElementById('mono-log').innerHTML = '';
+            document.getElementById('micro-log').innerHTML = '';
+
+            const statusMono = document.getElementById('mono-ui-status');
+            statusMono.style.background = '#fecaca'; statusMono.style.color = '#dc2626'; statusMono.innerText = 'TRAFFIC JAM';
+            
+            const statusMicro = document.getElementById('micro-ui-status');
+            statusMicro.style.background = '#bbf7d0'; statusMicro.style.color = '#16a34a'; statusMicro.innerText = 'PROCESSING FAST';
+
+            logTo('mono', `Initiating burst of ${TOTAL_BUYERS} concurrent Point-to-Point checkouts...`, 'sys');
+            logTo('micro', `Initiating burst of ${TOTAL_BUYERS} concurrent microservices checkouts...`, 'sys');
+
+            const payload = { customer_id: "LOAD-TEST", items: [{product_id: "PROD-001", quantity: 1, price: 149}], total_amount: 149 };
+
+            runMonolithLoad(payload);
+            runMicroserviceLoad(payload);
+        }
+
+        async function runMonolithLoad(payload) {
+            let completed = 0;
+            let totalTime = 0;
+            const promises = [];
+
+            // We mock the Point-to-Point backend in JS. 
+            // Why? Browsers limit concurrent fetch requests to the same host (max 6). 
+            // If we fired 100 real requests, it would completely block the network for the Microservices test, 
+            // making them queue up sequentially instead of running side-by-side in parallel.
+            for (let i = 1; i <= TOTAL_BUYERS; i++) {
+                const startTime = Date.now();
+                
+                // We stagger the start progressively by 300ms to simulate the API thread pool getting blocked
+                const p = new Promise(resolve => {
+                    setTimeout(() => {
+                        updateBadge('mono-q-api', 1);
+                        setTimeout(() => {
+                            updateBadge('mono-q-api', -1);
+                            updateBadge('mono-q-ord', 1);
+                            
+                            setTimeout(() => {
+                                updateBadge('mono-q-ord', -1);
+                                updateBadge('mono-q-inv', 1);
+                                
+                                // Backend simulates 2s for inventory
+                                setTimeout(() => {
+                                    updateBadge('mono-q-inv', -1);
+                                    updateBadge('mono-q-pay', 1);
+                                    
+                                    // Backend simulates 3s for payment
+                                    setTimeout(() => {
+                                        updateBadge('mono-q-pay', -1);
+                                        resolve();
+                                    }, 3000 + (Math.random() * 200));
+                                }, 2000 + (Math.random() * 200));
+                            }, 500 + (Math.random() * 100)); // order processing
+                        }, 200 + (Math.random() * 100));
+                    }, i * 300 + (Math.random() * 500)); // <== This creates the sequential traffic jam!
+                }).then(() => {
+                    const elapsed = (Date.now() - startTime) / 1000;
+                    totalTime += elapsed;
+                    completed++;
+                    document.getElementById('mono-comp').innerText = `${completed} / ${TOTAL_BUYERS}`;
+                    document.getElementById('mono-time').innerText = `${(totalTime / completed).toFixed(2)}s`;
+                    if (i % 10 === 0 || i === 1) {
+                        logTo('mono', `Order ${i} complete. Wait: ${elapsed.toFixed(1)}s`, 'wait');
+                    }
+                });
+
+                promises.push(p);
+            }
+
+            await Promise.all(promises);
+            document.getElementById('mono-ui-status').innerText = 'COMPLETED';
+            document.getElementById('mono-ui-status').style.background = '#e5e7eb';
+            document.getElementById('mono-ui-status').style.color = '#4b5563';
+            logTo('mono', `Point-to-Point test finished. Notice the traffic jam and wait times!`, 'sys');
+            checkEnableButton();
+        }
+
+        async function runMicroserviceLoad(payload) {
+            let completed = 0;
+            let totalTime = 0;
+            const promises = [];
+
+            for (let i = 1; i <= TOTAL_BUYERS; i++) {
+                const startTime = Date.now();
+                
+                updateBadge('micro-q-api', 1);
+
+                const p = fetch(`${API_BASE}/place_order`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                }).then(res => {
+                    const elapsed = (Date.now() - startTime) / 1000;
+                    totalTime += elapsed;
+                    completed++;
+                    document.getElementById('micro-comp').innerText = `${completed} / ${TOTAL_BUYERS}`;
+                    document.getElementById('micro-time').innerText = `${(totalTime / completed).toFixed(3)}s`;
+                    
+                    if (i % 10 === 0 || i === 1) logTo('micro', `Order ${i} API Response Instant. Wait: ${elapsed.toFixed(3)}s`, 'ok');
+                    
+                    // Backend API is done. Now visualize the background queueing.
+                    updateBadge('micro-q-api', -1);
+                    updateBadge('micro-q-broker', 1);
+                    
+                    // Simulate RabbitMQ distributing to consumers (instantly)
+                    setTimeout(() => {
+                        updateBadge('micro-q-broker', -1);
+                        updateBadge('micro-q-ord', 1);
+                        updateBadge('micro-q-inv', 1);
+                        updateBadge('micro-q-pay', 1);
+                    }, 200 + (Math.random() * 200));
+
+                    // Simulate Order worker finishing
+                    setTimeout(() => { updateBadge('micro-q-ord', -1); }, 1000 + (Math.random() * 400));
+
+                    // Simulate Inventory worker finishing (2s)
+                    setTimeout(() => { updateBadge('micro-q-inv', -1); }, 2200 + (Math.random() * 400));
+                    
+                    // Simulate Payment worker finishing (3s)
+                    setTimeout(() => { updateBadge('micro-q-pay', -1); }, 3200 + (Math.random() * 400));
+
+                }).catch(err => {
+                    logTo('micro', `Connection failed: ${err.message}`, 'err');
+                    updateBadge('micro-q-api', -1);
+                });
+
+                promises.push(p);
+            }
+
+            await Promise.all(promises);
+            document.getElementById('micro-ui-status').innerText = 'COMPLETED';
+            document.getElementById('micro-ui-status').style.background = '#e5e7eb';
+            document.getElementById('micro-ui-status').style.color = '#4b5563';
+            logTo('micro', `Microservice API test finished. 100% of HTTP connections closed instantly. Background workers are chewing through the queue safely!`, 'sys');
+            checkEnableButton();
+        }
+
+        let finishes = 0;
+        function checkEnableButton() {
+            finishes++;
+            if (finishes >= 2) {
+                document.getElementById('startBtn').disabled = false;
+                finishes = 0;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "name": "shopez-middleware",
+  "version": "1.0.0",
+  "description": "This repository contains the complete implementation of the **ShopEZ Malaysia Asynchronous Middleware Integration Prototype**.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "amqplib": "^2.0.1",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "express-http-proxy": "^2.1.2",
+    "sqlite3": "^6.0.1"
+  }
+}
