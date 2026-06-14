@@ -11,14 +11,13 @@ app.use(express.json());
 // Serve static frontend files from the root directory
 app.use(express.static(path.join(__dirname, '../')));
 
-const RABBITMQ_HOST = process.env.RABBITMQ_HOST || 'localhost';
-const RABBITMQ_PORT = process.env.RABBITMQ_PORT || 5672;
+const RABBITMQ_URL = process.env.RABBITMQ_URL || `amqp://guest:guest@${process.env.RABBITMQ_HOST || 'localhost'}:${process.env.RABBITMQ_PORT || 5672}`;
 const EXCHANGE_NAME = 'order_exchange';
 
 async function publishOrderEvent(orderData) {
     let connection;
     try {
-        const rabbitUrl = `amqp://guest:guest@${RABBITMQ_HOST}:${RABBITMQ_PORT}`;
+        const rabbitUrl = RABBITMQ_URL;
         connection = await amqp.connect(rabbitUrl);
         const channel = await connection.createChannel();
         

@@ -1,14 +1,13 @@
 const amqp = require('amqplib');
 const db = require('../db');
 
-const RABBITMQ_HOST = process.env.RABBITMQ_HOST || 'localhost';
-const RABBITMQ_PORT = process.env.RABBITMQ_PORT || 5672;
+const RABBITMQ_URL = process.env.RABBITMQ_URL || `amqp://guest:guest@${process.env.RABBITMQ_HOST || 'localhost'}:${process.env.RABBITMQ_PORT || 5672}`;
 const EXCHANGE_NAME = 'order_exchange';
 const QUEUE_NAME = 'order_queue';
 
 async function main() {
     console.log(" [Order Service] Starting consumer...");
-    const rabbitUrl = `amqp://guest:guest@${RABBITMQ_HOST}:${RABBITMQ_PORT}`;
+    const rabbitUrl = RABBITMQ_URL;
     
     let connection;
     let retries = 5;
